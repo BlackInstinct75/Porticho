@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rola – música desde YouTube</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap">
+<style>
+:root{--bg:#EDEFF5;--surface:#fff;--ink:#151B36;--mute:#5A6283;--accent:#3B4BF2;--on-accent:#fff;--line:#D5D9E8;--disc:#151B36;--groove:#2A3157;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1326;--surface:#181D38;--ink:#EEF0FA;--mute:#9AA2C6;--accent:#8C97FF;--on-accent:#0F1326;--line:#2A3157;--disc:#05070F;--groove:#1B2140;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0F1326;--surface:#181D38;--ink:#EEF0FA;--mute:#9AA2C6;--accent:#8C97FF;--on-accent:#0F1326;--line:#2A3157;--disc:#05070F;--groove:#1B2140;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;line-height:1.4}
+main{max-width:520px;margin:0 auto;padding:20px 18px 40px}
+h1{font-size:1.1rem;font-weight:800;margin:0 0 18px}
+.stage{display:flex;flex-direction:column;align-items:center;gap:16px}
+.disc{width:min(62vw,250px);aspect-ratio:1;border-radius:50%;background:repeating-radial-gradient(circle,var(--disc) 0 3px,var(--groove) 3px 4px);position:relative;animation:spin 5s linear infinite;animation-play-state:paused;box-shadow:0 0 0 1px var(--line)}
+.disc.on{animation-play-state:running}
+.disc::before{content:"";position:absolute;inset:30%;border-radius:50%;background:var(--accent)}
+.disc img{position:absolute;inset:30%;width:40%;height:40%;border-radius:50%;object-fit:cover}
+.disc::after{content:"";position:absolute;inset:48.5%;border-radius:50%;background:var(--bg)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.disc{animation:none}}
+.meta{text-align:center;min-height:3.2em;max-width:100%}
+.meta b{display:block;font-size:1.15rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta span{color:var(--mute);font-size:.9rem}
+.seek{width:100%;display:flex;align-items:center;gap:10px;font-size:.8rem;color:var(--mute);font-variant-numeric:tabular-nums}
+input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.ctl{display:flex;align-items:center;gap:14px}
+button{font:inherit;color:inherit;cursor:pointer}
+.ib{width:46px;height:46px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center}
+.ib svg{width:20px;height:20px;fill:currentColor}
+.ib.main{width:64px;height:64px;background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.ib.main svg{width:26px;height:26px}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.vol{display:flex;align-items:center;gap:8px;width:100%;color:var(--mute);font-size:.85rem}
+.vol input[type=range]{max-width:160px}
+.vol label.t{margin-left:auto;display:flex;gap:6px;align-items:center}
+.vid,.probe{position:fixed;left:0;top:0;width:200px;height:200px;opacity:0;pointer-events:none;z-index:-1}
+.vid.show{position:static;width:100%;height:auto;aspect-ratio:16/9;margin-top:14px;border-radius:10px;overflow:hidden;opacity:1;pointer-events:auto;z-index:auto}
+.vid iframe,.probe{border:0}
+.vid iframe{width:100%;height:100%}
+section{margin-top:26px}
+h2{font-size:.95rem;margin:0 0 8px;font-weight:600}
+.add{display:flex;gap:8px}
+textarea{flex:1;min-height:46px;resize:vertical;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn{padding:0 16px;border-radius:10px;border:0;background:var(--accent);color:var(--on-accent);font-weight:600}
+.hint{color:var(--mute);font-size:.82rem;margin:6px 0 0;min-height:1.2em}
+ul,ol{list-style:none;margin:0;padding:0}
+#list{border-top:1px solid var(--line)}
+#list>li{padding:10px 4px;border-bottom:1px solid var(--line)}
+.row{display:flex;align-items:center;gap:10px}
+.thw{width:56px;height:42px;border-radius:6px;background:var(--line);overflow:hidden;flex:none}
+.thw img{width:100%;height:100%;object-fit:cover;display:block}
+.nm{flex:1;min-width:0;text-align:left;background:none;border:0;padding:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+li.cur>.row .nm{color:var(--accent);font-weight:600}
+.sub{display:block;color:var(--mute);font-size:.78rem;font-weight:400}
+.x{background:none;border:0;color:var(--mute);font-size:1.2rem;padding:4px 8px}
+.tr{margin:8px 0 0 66px;border-left:2px solid var(--line)}
+.tr button{display:flex;gap:8px;width:100%;text-align:left;background:none;border:0;padding:5px 10px;font-size:.88rem;color:var(--mute)}
+.tr button.on{color:var(--accent);font-weight:600}
+.tr .n{width:1.6em;flex:none;font-variant-numeric:tabular-nums}
+.tr .tt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty{color:var(--mute);padding:18px 0;font-size:.92rem}
+</style>
+</head>
+<body>
+<main>
+<h1>Rola</h1>
+<div class="stage">
+  <div class="disc" id="disc"><img id="label" alt="" style="display:none"></div>
+  <div class="meta"><b id="title">Nada sonando</b><span id="author">Agrega un enlace de YouTube</span></div>
+  <div class="seek"><span id="cur">0:00</span><input type="range" id="seek" min="0" max="100" value="0" step="1" aria-label="Posición"><span id="dur">0:00</span></div>
+  <div class="ctl">
+    <button class="ib" id="prev" aria-label="Anterior"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+    <button class="ib main" id="play" aria-label="Reproducir"><svg viewBox="0 0 24 24" id="pi"><path d="M7 4.5v15l13-7.5z"/></svg></button>
+    <button class="ib" id="next" aria-label="Siguiente"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+  </div>
+  <div class="vol"><span>Volumen</span><input type="range" id="vol" min="0" max="100" value="80" aria-label="Volumen"><label class="t"><input type="checkbox" id="showvid"> Ver video</label></div>
+</div>
+<div class="vid" id="vidbox"><iframe id="yt" title="Reproductor de YouTube" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+<iframe class="probe" id="pr" title="Lector de listas" aria-hidden="true" tabindex="-1" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+
+<section>
+  <h2>Agregar canciones o listas</h2>
+  <div class="add"><textarea id="url" placeholder="Pega enlaces de YouTube (videos o listas)" aria-label="Enlaces de YouTube"></textarea><button class="btn" id="addbtn">Agregar</button></div>
+  <p class="hint" id="hint"></p>
+</section>
+<section>
+  <h2>Cola</h2>
+  <ul id="list"></ul>
+</section>
+</main>
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)};
+var q=[],T={},idx=0,loaded=false,playing=false,seeking=false,gotMsg=false,wd=0,pq=[],pw=0;
+try{var s=JSON.parse(localStorage.getItem('rola')||'null');if(s&&s.q){q=s.q;T=s.T||{};idx=Math.min(s.idx||0,Math.max(q.length-1,0))}}catch(e){}
+function save(){try{localStorage.setItem('rola',JSON.stringify({q:q,T:T,idx:idx}))}catch(e){}}
+function fmt(t){t=Math.max(0,Math.floor(t||0));var m=Math.floor(t/60),r=t%60;return m+':'+(r<10?'0':'')+r}
+function th(v){return 'https://i.ytimg.com/vi/'+v+'/mqdefault.jpg'}
+function vid(it){return it.id||(it.tracks&&it.tracks[it.pi||0])||null}
+function tname(v,n){return T[v]&&T[v].title?T[v].title:('Canción '+n)}
+function parse(txt){
+  var out=[];
+  txt.split(/[\s,]+/).forEach(function(p){
+    if(!p)return;
+    var m=p.match(/(?:v=|youtu\.be\/|shorts\/|embed\/|live\/)([\w-]{11})/)||p.match(/^([\w-]{11})$/);
+    var l=p.match(/[?&]list=([\w-]+)/);
+    if(l&&!/[?&]v=/.test(p))out.push({list:l[1]});
+    else if(m)out.push({id:m[1]});
+  });
+  return out;
+}
+function send(f,a){try{$('yt').contentWindow.postMessage(JSON.stringify({event:'command',func:f,args:a||[]}),'*')}catch(e){}}
+function listen(fr){try{fr.contentWindow.postMessage(JSON.stringify({event:'listening',id:1,channel:'widget'}),'*')}catch(e){}}
+function setPlaying(p){
+  playing=p;$('disc').classList.toggle('on',p);
+  $('pi').innerHTML=p?'<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>':'<path d="M7 4.5v15l13-7.5z"/>';
+  $('play').setAttribute('aria-label',p?'Pausar':'Reproducir');
+}
+function thumb(v){
+  var w=document.createElement('div');w.className='thw';
+  if(v){var im=document.createElement('img');im.alt='';im.src=th(v);im.onerror=function(){im.style.display='none'};w.appendChild(im)}
+  return w;
+}
+function setLabel(v){
+  var l=$('label');
+  if(!v){l.style.display='none';return}
+  l.style.display='';l.src=th(v);
+}
+$('label').onerror=function(){this.style.display='none'};
+function render(){
+  var ul=$('list');ul.innerHTML='';
+  if(!q.length){var e=document.createElement('li');e.className='empty';e.textContent='La cola está vacía. Pega un enlace para empezar.';ul.appendChild(e)}
+  q.forEach(function(it,i){
+    var li=document.createElement('li');if(i===idx)li.className='cur';
+    var row=document.createElement('div');row.className='row';
+    row.appendChild(thumb(vid(it)));
+    var b=document.createElement('button');b.className='nm';
+    var name=it.list?'Lista de reproducción':((T[it.id]&&T[it.id].title)||('Video '+it.id));
+    b.textContent=name;
+    var sub=document.createElement('span');sub.className='sub';
+    sub.textContent=it.list?(it.tracks?it.tracks.length+' canciones':'Leyendo canciones…'):((T[it.id]&&T[it.id].author)||'');
+    b.appendChild(sub);
+    b.onclick=function(){if(i===idx&&loaded&&!it.list)return;idx=i;load(it.pi||0)};
+    var x=document.createElement('button');x.className='x';x.textContent='×';x.setAttribute('aria-label','Quitar');
+    x.onclick=function(){
+      q.splice(i,1);
+      if(i<idx)idx--;
+      else if(i===idx){loaded=false;setPlaying(false);$('yt').src='about:blank';if(idx>=q.length)idx=Math.max(q.length-1,0)}
+      save();render();info();
+    };
+    row.appendChild(b);row.appendChild(x);li.appendChild(row);
+    if(it.list&&it.tracks){
+      var ol=document.createElement('ol');ol.className='tr';
+      it.tracks.forEach(function(v,j){
+        var tb=document.createElement('button');
+        if(i===idx&&j===(it.pi||0))tb.className='on';
+        var n=document.createElement('span');n.className='n';n.textContent=j+1;
+        var tt=document.createElement('span');tt.className='tt';tt.textContent=tname(v,j+1);
+        tb.appendChild(n);tb.appendChild(tt);
+        tb.onclick=function(){
+          if(i===idx&&loaded){it.pi=j;send('playVideoAt',[j]);render();info();setLabel(v)}
+          else{idx=i;load(j)}
+        };
+        var oli=document.createElement('li');oli.appendChild(tb);ol.appendChild(oli);
+      });
+      li.appendChild(ol);
+    }
+    ul.appendChild(li);
+  });
+}
+function info(){
+  var it=q[idx];
+  if(!it){$('title').textContent='Nada sonando';$('author').textContent='Agrega un enlace de YouTube';setLabel(null);return}
+  var v=vid(it);
+  if(it.list){
+    $('title').textContent=v?tname(v,(it.pi||0)+1):'Lista de reproducción';
+    $('author').textContent=(v&&T[v]&&T[v].author)||(it.tracks?it.tracks.length+' canciones en la lista':'YouTube');
+  }else{
+    $('title').textContent=(T[v]&&T[v].title)||('Video '+v);
+    $('author').textContent=(T[v]&&T[v].author)||'YouTube';
+  }
+  setLabel(v);
+}
+function load(start){
+  var it=q[idx];if(!it)return;
+  loaded=true;$('seek').value=0;$('cur').textContent='0:00';$('dur').textContent='0:00';
+  var base;
+  if(it.list){it.pi=start||0;base='https://www.youtube.com/embed/videoseries?list='+it.list+'&index='+(start||0)+'&'}
+  else base='https://www.youtube.com/embed/'+it.id+'?';
+  gotMsg=false;clearTimeout(wd);
+  wd=setTimeout(function(){if(!gotMsg)$('hint').textContent='El reproductor no responde. Marca «Ver video» para ver qué error muestra YouTube.'},6000);
+  $('yt').src=base+'enablejsapi=1&autoplay=1&playsinline=1&rel=0';
+  info();render();save();
+}
+$('yt').addEventListener('load',function(){if(!loaded)return;listen($('yt'));send('setVolume',[+$('vol').value])});
+$('pr').addEventListener('load',function(){if(pq.length)listen($('pr'))});
+function nextProbe(){
+  clearTimeout(pw);
+  while(pq.length&&pq[0].tracks)pq.shift();
+  if(!pq.length){$('pr').src='about:blank';return}
+  $('pr').src='https://www.youtube.com/embed/videoseries?list='+pq[0].list+'&enablejsapi=1&mute=1';
+  pw=setTimeout(function(){pq.shift();nextProbe()},8000);
+}
+function queueProbe(items){
+  var idle=!pq.length;
+  items.forEach(function(it){if(it.list&&!it.tracks&&pq.indexOf(it)<0)pq.push(it)});
+  if(idle&&pq.length)nextProbe();
+}
+function parseMsg(e){
+  var d=e.data;if(typeof d==='string'){try{d=JSON.parse(d)}catch(x){return null}}
+  return d;
+}
+window.addEventListener('message',function(e){
+  var d=parseMsg(e);if(!d)return;
+  if(e.source===$('pr').contentWindow){
+    if(d.event!=='infoDelivery'||!d.info||!pq.length)return;
+    var i=d.info,ch=false;
+    if(i.videoData&&i.videoData.video_id&&i.videoData.title&&!T[i.videoData.video_id]){T[i.videoData.video_id]={title:i.videoData.title,author:i.videoData.author};ch=true}
+    if(i.playlist&&i.playlist.length){pq[0].tracks=i.playlist;ch=true;save();render();nextProbe()}
+    else if(ch){save();render()}
+    return;
+  }
+  if(e.source!==$('yt').contentWindow)return;
+  gotMsg=true;
+  if(d.event==='onError'){$('hint').textContent='YouTube no permite reproducir este video aquí (código '+d.info+'). Prueba con otro.';return}
+  if(!d.info)return;
+  var i=d.info,it=q[idx],ch=false;
+  if(d.event==='onStateChange'){handleState(i);return}
+  if(d.event!=='infoDelivery')return;
+  if(i.videoData&&i.videoData.video_id){
+    var v=i.videoData,o=T[v.video_id];
+    if(v.title&&(!o||o.title!==v.title)){T[v.video_id]={title:v.title,author:v.author};ch=true}
+  }
+  if(it&&it.list){
+    if(i.playlist&&i.playlist.length&&(!it.tracks||it.tracks.join()!==i.playlist.join())){it.tracks=i.playlist;ch=true}
+    if(typeof i.playlistIndex==='number'&&it.pi!==i.playlistIndex){it.pi=i.playlistIndex;ch=true}
+  }
+  if(ch){info();render();save()}
+  if(typeof i.duration==='number'&&i.duration>0){$('dur').textContent=fmt(i.duration);$('seek').max=Math.floor(i.duration)}
+  if(typeof i.currentTime==='number'&&!seeking){$('cur').textContent=fmt(i.currentTime);$('seek').value=Math.floor(i.currentTime)}
+  if(typeof i.playerState==='number')handleState(i.playerState);
+});
+function handleState(s){
+  if(s===1)setPlaying(true);
+  else if(s===2)setPlaying(false);
+  else if(s===0){setPlaying(false);go(1,true)}
+}
+function go(d,auto){
+  if(!q.length)return;
+  var it=q[idx];
+  if(it&&it.list&&loaded&&!auto){send(d>0?'nextVideo':'previousVideo');return}
+  var n=idx+d;
+  if(n>=q.length){if(auto)return;n=0}
+  if(n<0)n=0;
+  idx=n;load(0);
+}
+$('play').onclick=function(){
+  if(!q.length){$('hint').textContent='Primero agrega al menos un enlace.';return}
+  if(!loaded){load(q[idx].pi||0);return}
+  send(playing?'pauseVideo':'playVideo');
+};
+$('next').onclick=function(){go(1,false)};
+$('prev').onclick=function(){go(-1,false)};
+$('seek').addEventListener('input',function(){seeking=true;$('cur').textContent=fmt(+this.value)});
+$('seek').addEventListener('change',function(){send('seekTo',[+this.value,true]);seeking=false});
+$('vol').addEventListener('input',function(){send('setVolume',[+this.value])});
+$('showvid').addEventListener('change',function(){$('vidbox').classList.toggle('show',this.checked)});
+$('addbtn').onclick=function(){
+  var items=parse($('url').value);
+  if(!items.length){$('hint').textContent='No encontré enlaces de YouTube válidos.';return}
+  var was=q.length;
+  items.forEach(function(o){q.push(o)});
+  $('url').value='';$('hint').textContent=items.length+(items.length===1?' elemento agregado.':' elementos agregados.');
+  if(!was)idx=0;
+  save();render();info();queueProbe(items);
+};
+render();info();queueProbe(q);
+})();
+</script>
+</body>
+</html>

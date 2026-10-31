@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>html,body{margin:0;height:100%;background:#000}#p{width:100%;height:100%}</style></head>
+<body><div id="p"></div>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+    var player, ready = false, pending = null, last = '';
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('p', {
+        width: '100%', height: '100%',
+        playerVars: { playsinline: 1, rel: 0, controls: 0, fs: 0, enablejsapi: 1, origin: '__ORIGIN__', widget_referrer: '__ORIGIN__' },
+        events: {
+          onReady: function () { ready = true; Android.onReady(); if (pending) { pending(); pending = null; } },
+          onStateChange: function (e) { Android.onState(e.data); report(); },
+          onError: function (e) { Android.onError(e.data); }
+        }
+      });
+      setInterval(tick, 500);
+    }
+    function run(f) { if (ready) f(); else pending = f; }
+    function loadVideo(id) { run(function () { player.loadVideoById(id); }); }
+    function loadList(id, i) { run(function () { player.loadPlaylist({ list: id, listType: 'playlist', index: i || 0 }); }); }
+    function cueList(id) { run(function () { player.cuePlaylist({ list: id, listType: 'playlist', index: 0 }); }); }
+    function play() { run(function () { player.playVideo(); }); }
+    function pause() { run(function () { player.pauseVideo(); }); }
+    function seek(s) { run(function () { player.seekTo(s, true); }); }
+    function vol(v) { run(function () { player.setVolume(v); }); }
+    function nextV() { run(function () { player.nextVideo(); }); }
+    function prevV() { run(function () { player.previousVideo(); }); }
+    function playAt(i) { run(function () { player.playVideoAt(i); }); }
+    function report() {
+      if (!ready) return;
+      var d = player.getVideoData() || {};
+      var s = JSON.stringify({ id: d.video_id || '', title: d.title || '', author: d.author || '',
+        playlist: player.getPlaylist() || [], index: player.getPlaylistIndex() });
+      if (s !== last) { last = s; Android.onInfo(s); }
+    }
+    function tick() {
+      if (!ready) return;
+      Android.onTime(player.getCurrentTime() || 0, player.getDuration() || 0);
+      report();
+    }
+</script></body></html>
