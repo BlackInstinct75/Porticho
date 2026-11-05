@@ -149,12 +149,34 @@ fun NowPlaying(c: RolaController) {
             )
             Text(fmt(c.duration), style = MaterialTheme.typography.labelSmall)
         }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+
+        // Fila de controles ampliada con Aleatorio y Bucle
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Botón Aleatorio (Shuffle)
+            IconButton(onClick = { c.toggleShuffle() }) {
+                Icon(
+                    Icons.Filled.Shuffle,
+                    contentDescription = "Aleatorio",
+                    tint = if (c.shuffle) cs.primary else cs.onBackground.copy(alpha = 0.6f)
+                )
+            }
+
             IconButton(onClick = { c.prev() }) { Icon(Icons.Filled.SkipPrevious, "Anterior") }
+
             FilledIconButton(onClick = { c.toggle() }, modifier = Modifier.size(64.dp)) {
                 Icon(if (c.playing) Icons.Filled.Pause else Icons.Filled.PlayArrow, if (c.playing) "Pausar" else "Reproducir", Modifier.size(30.dp))
             }
+
             IconButton(onClick = { c.next() }) { Icon(Icons.Filled.SkipNext, "Siguiente") }
+
+            // Botón Bucle (Loop)
+            IconButton(onClick = { c.toggleLoop() }) {
+                Icon(
+                    if (c.loopMode == 1) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+                    contentDescription = "Bucle",
+                    tint = if (c.loopMode > 0) cs.primary else cs.onBackground.copy(alpha = 0.6f)
+                )
+            }
         }
     }
 }

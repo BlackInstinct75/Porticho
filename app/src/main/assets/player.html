@@ -1,17 +1,25 @@
 <!DOCTYPE html>
 <html><head><meta name="viewport" content="width=device-width,initial-scale=1">
-    <style>html,body{margin:0;height:100%;background:#000}#p{width:100%;height:100%}</style></head>
+    <style>html,body{margin:0;height:100%;background:#000}#p{width:100%}</style></head>
 <body><div id="p"></div>
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-    var player, ready = false, pending = null, last = '';
+    var player, ready = false, pending = null, last = '', isLooping = false;
     function onYouTubeIframeAPIReady() {
       player = new YT.Player('p', {
         width: '100%', height: '100%',
         playerVars: { playsinline: 1, rel: 0, controls: 0, fs: 0, enablejsapi: 1, origin: '__ORIGIN__', widget_referrer: '__ORIGIN__' },
         events: {
           onReady: function () { ready = true; Android.onReady(); if (pending) { pending(); pending = null; } },
-          onStateChange: function (e) { Android.onState(e.data); report(); },
+          onStateChange: function (e) {
+              Android.onState(e.data);
+              // Si el video termina (0) y el bucle está activo, se reinicia inmediatamente aquí mismo
+              if (e.data === 0 && isLooping) {
+                  player.seekTo(0);
+                  player.playVideo();
+              }
+              report();
+          },
           onError: function (e) { Android.onError(e.data); }
         }
       });
@@ -28,6 +36,7 @@
     function nextV() { run(function () { player.nextVideo(); }); }
     function prevV() { run(function () { player.previousVideo(); }); }
     function playAt(i) { run(function () { player.playVideoAt(i); }); }
+    function setLoop(val) { isLooping = val; }
     function report() {
       if (!ready) return;
       var d = player.getVideoData() || {};

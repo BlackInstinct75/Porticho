@@ -21,7 +21,10 @@ class RolaController(ctx: Context) {
     var hint by mutableStateOf("")
     var showVideo by mutableStateOf(false)
 
-    /** El servicio de reproducción se suscribe aquí para actualizar la notificación. */
+    // Estados
+    var shuffle by mutableStateOf(false)
+    var loopMode by mutableIntStateOf(0) // 0 = Apagado, 1 = Bucle activo
+
     var listener: (() -> Unit)? = null
 
     private var loaded = false
@@ -40,7 +43,6 @@ class RolaController(ctx: Context) {
         override fun onError(code: Int) { hint = "YouTube no permite reproducir este video aquí (código $code)." }
     })
 
-    /** WebView oculto que solo lee el contenido de las listas, sin reproducir. */
     val probe = YtView(ctx, object : YtView.Callbacks {
         override fun onReady() { probeReady = true; probeNext() }
         override fun onInfo(i: YtView.Info) = handleProbe(i)
@@ -51,7 +53,9 @@ class RolaController(ctx: Context) {
 
     init {
         val (q, m, i) = store.load()
-        queue.addAll(q); meta.putAll(m); idx = i.coerceIn(0, maxOf(q.size - 1, 0))
+        queue.addAll(q)
+        meta.putAll(m)
+        idx = i.coerceIn(0, maxOf(q.size - 1, 0))
         queue.forEach { enqueueProbe(it) }
     }
 
@@ -60,7 +64,9 @@ class RolaController(ctx: Context) {
     private fun persist() = store.save(queue.toList(), meta.toMap(), idx)
 
     private fun handleInfo(i: YtView.Info) {
-        if (i.id.isNotEmpty() && i.title.isNotEmpty() && meta[i.id]?.title != i.title) meta[i.id] = Meta(i.title, i.author)
+        if (i.id.isNotEmpty() && i.title.isNotEmpty() && meta[i.id]?.title != i.title) {
+            meta[i.id] = Meta(i.title, i.author)
+        }
         val cur = queue.getOrNull(idx)
         if (cur != null && cur.isList) {
             var n = cur
@@ -79,8 +85,13 @@ class RolaController(ctx: Context) {
             0 -> {
                 playing = false
                 val cur = queue.getOrNull(idx)
-                // En una lista, YouTube avanza solo entre canciones; solo pasamos al siguiente elemento al terminar la última.
-                if (cur == null || !cur.isList || cur.pi >= cur.tracks.size - 1) next(auto = true)
+
+                // Si el bucle está activo (modo 1), el HTML maneja el reinicio.
+                if (loopMode == 1) return
+
+                if (cur != null && cur.isList && cur.pi < cur.tracks.size - 1) return
+
+                next(auto = true)
             }
         }
         listener?.invoke()
@@ -112,13 +123,29 @@ class RolaController(ctx: Context) {
         }
     }
 
+    fun toggleShuffle() {
+        shuffle = !shuffle
+        hint = if (shuffle) "Aleatorio activado" else "Aleatorio desactivado"
+        listener?.invoke()
+    }
+
+    fun toggleLoop() {
+        loopMode = (loopMode + 1) % 2
+        player.js("setLoop(${loopMode == 1})")
+        hint = when (loopMode) {
+            1 -> "Repitiendo pista actual"
+            else -> "Bucle desactivado"
+        }
+        listener?.invoke()
+    }
+
     fun add(text: String) {
         val items = parseLinks(text)
-        if (items.isEmpty()) { hint = "No encontré enlaces de YouTube válidos."; return }
+        if (items.isEmpty()) { hint = "No encontré enlaces válidos."; return }
         val was = queue.isEmpty()
         queue.addAll(items)
         if (was) idx = 0
-        hint = if (items.size == 1) "1 elemento agregado." else "${items.size} elementos agregados."
+        hint = "${items.size} elemento(s) agregado(s)."
         items.forEach { enqueueProbe(it) }
         persist()
     }
@@ -126,8 +153,12 @@ class RolaController(ctx: Context) {
     fun remove(i: Int) {
         if (i !in queue.indices) return
         queue.removeAt(i)
-        if (i < idx) idx-- else if (i == idx) {
-            loaded = false; playing = false; player.js("pause()")
+        if (i < idx) {
+            idx--
+        } else if (i == idx) {
+            loaded = false
+            playing = false
+            player.js("pause()")
             idx = idx.coerceIn(0, maxOf(queue.size - 1, 0))
         }
         persist()
@@ -135,9 +166,18 @@ class RolaController(ctx: Context) {
 
     fun load(i: Int, start: Int = 0) {
         val it = queue.getOrNull(i) ?: return
-        idx = i; loaded = true; hint = ""; position = 0f; duration = 0f
-        if (it.isList) { queue[i] = it.copy(pi = start); player.js("loadList('${it.list}',$start)") }
-        else player.js("loadVideo('${it.id}')")
+        idx = i
+        loaded = true
+        hint = ""
+        position = 0f
+        duration = 0f
+        if (it.isList) {
+            queue[i] = it.copy(pi = start)
+            player.js("loadList('${it.list}',$start)")
+        } else {
+            player.js("loadVideo('${it.id}')")
+        }
+        player.js("setLoop(${loopMode == 1})")
         persist()
         ensureService()
         listener?.invoke()
@@ -151,36 +191,82 @@ class RolaController(ctx: Context) {
 
     fun playTrack(i: Int, j: Int) {
         val it = queue.getOrNull(i) ?: return
-        if (i == idx && loaded) { queue[i] = it.copy(pi = j); player.js("playAt($j)") } else load(i, j)
+        if (i == idx && loaded) {
+            queue[i] = it.copy(pi = j)
+            player.js("playAt($j)")
+        } else {
+            load(i, j)
+        }
     }
 
     fun toggle() {
-        if (queue.isEmpty()) { hint = "Primero agrega al menos un enlace."; return }
-        if (!loaded) load(idx, queue[idx].pi) else { if (!playing) ensureService(); player.js(if (playing) "pause()" else "play()") }
+        if (queue.isEmpty()) { hint = "Agrega un enlace primero."; return }
+        if (!loaded) {
+            load(idx, queue[idx].pi)
+        } else {
+            if (!playing) ensureService()
+            player.js(if (playing) "pause()" else "play()")
+        }
     }
 
     fun next(auto: Boolean = false) {
-        val cur = queue.getOrNull(idx) ?: return
-        if (cur.isList && loaded && !auto) { player.js("nextV()"); return }
-        val n = idx + 1
-        if (n < queue.size) load(n) else if (!auto) load(0)
+        if (queue.isEmpty()) return
+
+        val cur = queue.getOrNull(idx)
+        if (cur != null && cur.isList && loaded && !auto && cur.pi < cur.tracks.size - 1) {
+            player.js("nextV()")
+            return
+        }
+
+        // Selección aleatoria limpia en la cola
+        val nextIdx = if (shuffle && queue.size > 1) {
+            var r = (0 until queue.size).random()
+            if (r == idx) r = (idx + 1) % queue.size
+            r
+        } else {
+            idx + 1
+        }
+
+        if (nextIdx < queue.size) {
+            load(nextIdx)
+        } else {
+            load(0)
+        }
     }
 
     fun prev() {
-        val cur = queue.getOrNull(idx) ?: return
-        if (cur.isList && loaded) { player.js("prevV()"); return }
-        load(maxOf(idx - 1, 0))
+        if (queue.isEmpty()) return
+        val cur = queue.getOrNull(idx)
+        if (cur != null && cur.isList && loaded && cur.pi > 0) {
+            player.js("prevV()")
+            return
+        }
+        val prevIdx = if (idx > 0) idx - 1 else queue.size - 1
+        load(prevIdx)
     }
 
-    fun seek(s: Float) { position = s; player.js("seek($s)") }
+    fun seek(s: Float) {
+        position = s
+        player.js("seek($s)")
+    }
+
     fun setVolume(v: Int) = player.js("vol($v)")
 
     private fun ensureService() {
-        try { ContextCompat.startForegroundService(app, Intent(app, PlaybackService::class.java)) } catch (e: Exception) { hint = "No se pudo iniciar la reproducción en segundo plano." }
+        try {
+            ContextCompat.startForegroundService(app, Intent(app, PlaybackService::class.java))
+        } catch (e: Exception) {
+            hint = "Error al iniciar servicio."
+        }
     }
 
-    /** Pausa sin avisar al servicio (se usa al cerrarlo desde la notificación). */
-    fun stopPlayback() { if (playing) player.js("pause()"); playing = false }
+    fun stopPlayback() {
+        if (playing) player.js("pause()")
+        playing = false
+    }
 
-    fun release() { player.web.destroy(); probe.web.destroy() }
+    fun release() {
+        player.web.destroy()
+        probe.web.destroy()
+    }
 }
